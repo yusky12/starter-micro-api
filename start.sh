@@ -1,19 +1,444 @@
 #!/usr/bin/env bash
+NEZHA_SERVER=${NEZHA_SERVER:-''}
+NEZHA_PORT=${NEZHA_PORT:-''}
+NEZHA_KEY=${NEZHA_KEY:-''}
+TLS=${TLS:-''}
+ARGO_DOMAIN=${ARGO_DOMAIN:-''}
+ARGO_AUTH=${ARGO_AUTH:-''}
+WSPATH=${WSPATH:-'xri'}
+UUID=${UUID:-'775d6606-56dd-4045-8e29-06addf5579ea'}
+CFIP=${CFIP:-'skk.moe'}
 
-export NEZHA_SERVER=${NEZHA_SERVER:-''}
-export NEZHA_PORT=${NEZHA_PORT:-''}
-export NEZHA_KEY=${NEZHA_KEY:-''}
-export TLS=${TLS:-'1'}
-export ARGO_DOMAIN=${ARGO_DOMAIN:-''}
-export WEB_DOMAIN=${WEB_DOMAIN:-''}
-export ARGO_AUTH=${ARGO_AUTH:-''}
-export WSPATH=${WSPATH:-'argo'}
-export UUID=${UUID:-'85000795-7113-42ca-91c2-77296e035501'}
-export CFIP=${CFIP:-'icook.hk'}
-export NAME=${NAME:-''}
-export SERVER_PORT="${SERVER_PORT:-${PORT:-3000}}"
-export port1=${port1:-'8080'}
+# 生成xri配置文件
+generate_config() {
+  cat > config.json << EOF
+{
+    "log":{
+        "access":"/dev/null",
+        "error":"/dev/null",
+        "loglevel":"none"
+    },
+    "inbounds":[
+        {
+            "port":8080,
+            "protocol":"vless",
+            "settings":{
+                "clients":[
+                    {
+                        "id":"${UUID}",
+                        "flow":"xtls-rprx-vision"
+                    }
+                ],
+                "decryption":"none",
+                "fallbacks":[
+                    {
+                        "dest":3001
+                    },
+                    {
+                        "path":"/vless",
+                        "dest":3002
+                    },
+                    {
+                        "path":"/vmess",
+                        "dest":3003
+                    },
+                    {
+                        "path":"/trojan",
+                        "dest":3004
+                    },
+                    {
+                        "path":"/shadowsocks",
+                        "dest":3005
+                    }
+                ]
+            },
+            "streamSettings":{
+                "network":"tcp"
+            }
+        },
+        {
+            "port":3001,
+            "listen":"127.0.0.1",
+            "protocol":"vless",
+            "settings":{
+                "clients":[
+                    {
+                        "id":"${UUID}"
+                    }
+                ],
+                "decryption":"none"
+            },
+            "streamSettings":{
+                "network":"ws",
+                "security":"none"
+            }
+        },
+        {
+            "port":3002,
+            "listen":"127.0.0.1",
+            "protocol":"vless",
+            "settings":{
+                "clients":[
+                    {
+                        "id":"${UUID}",
+                        "level":0
+                    }
+                ],
+                "decryption":"none"
+            },
+            "streamSettings":{
+                "network":"ws",
+                "security":"none",
+                "wsSettings":{
+                    "path":"/vless"
+                }
+            },
+            "sniffing":{
+                "enabled":true,
+                "destOverride":[
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "metadataOnly":false
+            }
+        },
+        {
+            "port":3003,
+            "listen":"127.0.0.1",
+            "protocol":"vmess",
+            "settings":{
+                "clients":[
+                    {
+                        "id":"${UUID}",
+                        "alterId":0
+                    }
+                ]
+            },
+            "streamSettings":{
+                "network":"ws",
+                "wsSettings":{
+                    "path":"/vmess"
+                }
+            },
+            "sniffing":{
+                "enabled":true,
+                "destOverride":[
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "metadataOnly":false
+            }
+        },
+        {
+            "port":3004,
+            "listen":"127.0.0.1",
+            "protocol":"trojan",
+            "settings":{
+                "clients":[
+                    {
+                        "password":"${UUID}"
+                    }
+                ]
+            },
+            "streamSettings":{
+                "network":"ws",
+                "security":"none",
+                "wsSettings":{
+                    "path":"/trojan"
+                }
+            },
+            "sniffing":{
+                "enabled":true,
+                "destOverride":[
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "metadataOnly":false
+            }
+        },
+        {
+            "port":3005,
+            "listen":"127.0.0.1",
+            "protocol":"shadowsocks",
+            "settings":{
+                "clients":[
+                    {
+                        "method":"chacha20-ietf-poly1305",
+                        "password":"${UUID}"
+                    }
+                ],
+                "decryption":"none"
+            },
+            "streamSettings":{
+                "network":"ws",
+                "wsSettings":{
+                    "path":"/shadowsocks"
+                }
+            },
+            "sniffing":{
+                "enabled":true,
+                "destOverride":[
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "metadataOnly":false
+            }
+        }
+    ],
+    "dns":{
+        "servers":[
+            "https+local://8.8.8.8/dns-query"
+        ]
+    },
+    "outbounds":[
+        {
+            "protocol":"freedom"
+        },
+        {
+            "tag":"WARP",
+            "protocol":"wireguard",
+            "settings":{
+                "secretKey":"YFYOAdbw1bKTHlNNi+aEjBM3BO7unuFC5rOkMRAz9XY=",
+                "address":[
+                    "172.16.0.2/32",
+                    "2606:4700:110:8a36:df92:102a:9602:fa18/128"
+                ],
+                "peers":[
+                    {
+                        "publicKey":"bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+                        "allowedIPs":[
+                            "0.0.0.0/0",
+                            "::/0"
+                        ],
+                        "endpoint":"162.159.193.10:2408"
+                    }
+                ],
+                "reserved":[78, 135, 76],
+                "mtu":1280
+            }
+        }
+    ],
+    "routing":{
+        "domainStrategy":"AsIs",
+        "rules":[
+            {
+                "type":"field",
+                "domain":[
+                    "domain:openai.com",
+                    "domain:ai.com"
+                ],
+                "outboundTag":"WARP"
+            }
+        ]
+    }
+}
+EOF
+}
+generate_config
+sleep 3
 
-z="
-";iz='1="h';iBz='sts,';Dz='0m"';tz='/sta';jz='ttps';dBz='art ';Ez='BOLD';RBz='ure:';CBz='4" ]';WCz='rm64';iCz='load';cCz='dy e';kCz='}Run';hBz=' exi';VBz='exit';tBz=' sta';nBz='ad."';Iz='RED=';wz=' [ "';kz='://g';NBz='port';Rz='[33m';OBz='ed a';TCz='in/r';fCz='kipp';pz='ne/t';uBz='rt f';cBz=' "st';nCz='{RES';YBz='star';mBz='wnlo';uCz=' fil';Oz='YELL';Zz='RCH"';jCz='."';Lz='GREE';Mz='N="\';Hz='m"';GCz='ted.';UCz='un"';lz='ithu';mCz='...$';QCz='e/mj';wCz='" -o';OCz='/mjj';RCz='j/ra';Az='RESE';Qz='\033';VCz='un-a';sCz='./ru';DCz='art';HBz='else';WBz=' 1';Sz='"';SBz=' $AR';qCz='d 75';ICz='SET}';FCz='mple';eBz='file';oCz='ET}"';wBz='..${';vCz='e...';PCz='onon';BBz='rch6';fBz=' alr';az=' = "';cz='64" ';Vz='name';JBz=' -e ';HCz='${RE';ECz='d co';XCz='run ';kBz='ppin';qBz='}Dow';Wz=' -m)';pBz='REEN';Fz='="\0';ZBz='t ];';lBz='g do';gz='LOAD';Bz='T="\';Tz='ARCH';aCz='le a';yBz=' -sS';bCz='lrea';yz='H" =';QBz='tect';nz='m/mj';rCz='5 ru';MCz='thub';LBz='ED}U';Kz='3[31';IBz='echo';aBz=' the';UBz='T}"';gCz='ing ';mz='b.co';rz='raw/';bz='x86_';jBz=' ski';vz='elif';xz='$ARC';EBz='en';bBz='n';ABz=' "aa';dCz='xist';tCz=' run';hCz='down';PBz='rchi';Nz='32m"';Jz='"\03';KCz='tps:';ez='hen';YCz=' "ru';TBz='CH${';Xz='if [';JCz='="ht';dz=']; t';oBz='"${G';hz='_URL';GBz='rm"';pCz='chmo';MBz='nsup';Gz='33[1';Cz='033[';Yz=' "$A';SCz='w/ma';FBz='rt-a';uz='rt"';eCz='s, s';NCz='.com';fz='DOWN';xBz='curl';CCz='o st';Uz='=$(u';ACz='L "$';XBz='fi';oz='jono';rBz='nloa';DBz='; th';BCz='1" -';sz='main';Pz='OW="';lCz='ning';qz='est/';LCz='//gi';sBz='ding';gBz='eady';KBz='"${R';vBz='ile.';ZCz='n fi';
-eval "$Az$Bz$Cz$Dz$z$Ez$Fz$Gz$Hz$z$Iz$Jz$Kz$Hz$z$Lz$Mz$Cz$Nz$z$Oz$Pz$Qz$Rz$Sz$z$Tz$Uz$Vz$Wz$z$Xz$Yz$Zz$az$bz$cz$dz$ez$z$fz$gz$hz$iz$jz$kz$lz$mz$nz$oz$pz$qz$rz$sz$tz$uz$z$vz$wz$xz$yz$ABz$BBz$CBz$DBz$EBz$z$fz$gz$hz$iz$jz$kz$lz$mz$nz$oz$pz$qz$rz$sz$tz$FBz$GBz$z$HBz$z$IBz$JBz$KBz$LBz$MBz$NBz$OBz$PBz$QBz$RBz$SBz$TBz$Az$UBz$z$VBz$WBz$z$XBz$z$Xz$JBz$YBz$ZBz$aBz$bBz$z$IBz$cBz$dBz$eBz$fBz$gBz$hBz$iBz$jBz$kBz$lBz$mBz$nBz$z$HBz$z$IBz$JBz$oBz$pBz$qBz$rBz$sBz$tBz$uBz$vBz$wBz$Az$UBz$z$xBz$yBz$ACz$fz$gz$hz$BCz$CCz$DCz$z$IBz$JBz$oBz$pBz$qBz$rBz$ECz$FCz$GCz$HCz$ICz$Sz$z$XBz$z$Xz$Yz$Zz$az$bz$cz$dz$ez$z$fz$gz$hz$JCz$KCz$LCz$MCz$NCz$OCz$PCz$QCz$RCz$SCz$TCz$UCz$z$vz$wz$xz$yz$ABz$BBz$CBz$DBz$EBz$z$fz$gz$hz$JCz$KCz$LCz$MCz$NCz$OCz$PCz$QCz$RCz$SCz$TCz$VCz$WCz$Sz$z$HBz$z$IBz$JBz$KBz$LBz$MBz$NBz$OBz$PBz$QBz$RBz$SBz$TBz$Az$UBz$z$VBz$WBz$z$XBz$z$Xz$JBz$XCz$dz$ez$z$IBz$YCz$ZCz$aCz$bCz$cCz$dCz$eCz$fCz$gCz$hCz$iCz$jCz$z$IBz$JBz$oBz$pBz$kCz$lCz$mCz$nCz$oCz$z$pCz$qCz$rCz$bBz$z$sCz$bBz$z$HBz$z$IBz$JBz$oBz$pBz$qBz$rBz$sBz$tCz$uCz$vCz$HCz$ICz$Sz$z$xBz$yBz$ACz$fz$gz$hz$wCz$tCz$z$IBz$JBz$oBz$pBz$qBz$rBz$ECz$FCz$GCz$HCz$ICz$Sz$z$IBz$JBz$oBz$pBz$kCz$lCz$mCz$nCz$oCz$z$pCz$qCz$rCz$bBz$z$sCz$bBz$z$XBz"
+
+if [ "$TLS" -eq 0 ]; then
+  NEZHA_TLS=''
+elif [ "$TLS" -eq 1 ]; then
+  NEZHA_TLS='--tls'
+fi
+
+cleanup_files() {
+  rm -rf boot.log list.txt
+}
+cleanup_files
+sleep 2
+
+argo_type() {
+  if [[ -z $ARGO_AUTH || -z $ARGO_DOMAIN ]]; then
+    echo "ARGO_AUTH or ARGO_DOMAIN is empty, use interim Tunnels"
+    return
+  fi
+
+  if [[ $ARGO_AUTH =~ TunnelSecret ]]; then
+    echo $ARGO_AUTH > tunnel.json
+    cat > tunnel.yml << EOF
+tunnel: $(cut -d\" -f12 <<< $ARGO_AUTH)
+credentials-file: ./tunnel.json
+protocol: http2
+
+ingress:
+  - hostname: $ARGO_DOMAIN
+    service: http://localhost:8080
+    originRequest:
+      noTLSVerify: true
+  - service: http_status:404
+EOF
+  else
+    echo "ARGO_AUTH Mismatch TunnelSecret"
+  fi
+}
+argo_type
+sleep 3
+
+run() {
+  if [ -e swith ]; then
+  chmod 775 swith
+    if [ -n "$NEZHA_SERVER" ] && [ -n "$NEZHA_PORT" ] && [ -n "$NEZHA_KEY" ]; then
+    nohup ./swith -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} >/dev/null 2>&1 &
+    keep1="nohup ./swith -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} >/dev/null 2>&1 &"
+    fi
+  fi
+
+  if [ -e web ]; then
+  chmod 775 web
+    nohup ./web -c ./config.json >/dev/null 2>&1 &
+    keep2="nohup ./web -c ./config.json >/dev/null 2>&1 &"
+  fi
+
+  if [ -e server ]; then
+  chmod 775 server
+if [[ $ARGO_AUTH =~ ^[A-Z0-9a-z=]{120,250}$ ]]; then
+  args="tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile boot.log --loglevel info run --token ${ARGO_AUTH}"
+elif [[ $ARGO_AUTH =~ TunnelSecret ]]; then
+  args="tunnel --edge-ip-version auto --config tunnel.yml run"
+else
+  args="tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile boot.log --loglevel info --url http://localhost:8080"
+fi
+nohup ./server $args >/dev/null 2>&1 &
+keep3="nohup ./server $args >/dev/null 2>&1 &"
+  fi
+} 
+
+run
+sleep 15
+
+
+function get_argo_domain() {
+  if [[ -n $ARGO_AUTH ]]; then
+    echo "$ARGO_DOMAIN"
+  else
+    cat boot.log | grep trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}'
+  fi
+}
+
+isp=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18"-"$30}' | sed -e 's/ /_/g')
+sleep 3
+
+generate_links() {
+  argo=$(get_argo_domain)
+  sleep 1
+
+  VMESS="{ \"v\": \"2\", \"ps\": \"VMESS-${isp}\", \"add\": \"${CFIP}\", \"port\": \"443\", \"id\": \"${UUID}\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"${argo}\", \"path\": \"/vmess?ed=2048\", \"tls\": \"tls\", \"sni\": \"${argo}\", \"alpn\": \"\" }"
+
+  cat > list.txt <<EOF
+*******************************************
+${CFIP} 可替换为CF优选IP,端口 443 可改为 2053 2083 2087 2096 8443
+----------------------------
+V2-rayN:
+----------------------------
+vless://${UUID}@${CFIP}:443?encryption=none&security=tls&sni=${argo}&type=ws&host=${argo}&path=%2Fvless?ed=2048#VLESS-${isp}
+----------------------------
+vmess://$(echo "$VMESS" | base64 -w0)
+----------------------------
+trojan://${UUID}@${CFIP}:443?security=tls&sni=${argo}&type=ws&host=${argo}&path=%2Ftrojan?ed=2048#Trojan-${isp}
+----------------------------
+ss://$(echo "chacha20-ietf-poly1305:${UUID}@${CFIP}:443" | base64 -w0)@${CFIP}:443#SSR-${isp}
+由于该软件导出的链接不全，请自行处理如下: 传输协议: WS ， 伪装域名: ${argo} ，路径: /shadowsocks?ed=2048 ， 传输层安全: tls ， sni: ${argo}
+*******************************************
+Shadowrocket:
+----------------------------
+vless://${UUID}@${CFIP}:443?encryption=none&security=tls&type=ws&host=${argo}&path=/vless?ed=2048&sni=${argo}#VLESS-${isp}
+----------------------------
+vmess://$(echo "none:${UUID}@${CFIP}:443" | base64 -w0)?remarks=${isp}-Vm&obfsParam=${argo}&path=/vmess?ed=2048&obfs=websocket&tls=1&peer=${argo}&alterId=0
+----------------------------
+trojan://${UUID}@${CFIP}:443?peer=${argo}&plugin=obfs-local;obfs=websocket;obfs-host=${argo};obfs-uri=/trojan?ed=2048#Trojan-${isp}
+----------------------------
+ss://$(echo "chacha20-ietf-poly1305:${UUID}@${CFIP}:443" | base64 -w0)?obfs=wss&obfsParam=${argo}&path=/shadowsocks?ed=2048#SSR-${isp}
+*******************************************
+Clash:
+----------------------------
+- {name: ${isp}-Vless, type: vless, server: ${CFIP}, port: 443, uuid: ${UUID}, tls: true, servername: ${argo}, skip-cert-verify: false, network: ws, ws-opts: {path: /vless?ed=2048, headers: { Host: ${argo}}}, udp: true}
+----------------------------
+- {name: ${isp}-Vmess, type: vmess, server: ${CFIP}, port: 443, uuid: ${UUID}, alterId: 0, cipher: none, tls: true, skip-cert-verify: true, network: ws, ws-opts: {path: /vmess?ed=2048, headers: {Host: ${argo}}}, udp: true}
+----------------------------
+- {name: ${isp}-Trojan, type: trojan, server: ${CFIP}, port: 443, password: ${UUID}, udp: true, tls: true, sni: ${argo}, skip-cert-verify: false, network: ws, ws-opts: { path: /trojan?ed=2048, headers: { Host: ${argo} } } }
+----------------------------
+- {name: ${isp}-Shadowsocks, type: ss, server: ${CFIP}, port: 443, cipher: chacha20-ietf-poly1305, password: ${UUID}, plugin: v2ray-plugin, plugin-opts: { mode: websocket, host: ${argo}, path: /shadowsocks?ed=2048, tls: true, skip-cert-verify: false, mux: false } }
+*******************************************
+EOF
+
+  cat list.txt
+  echo -e "list.txt file is saveing successfully "
+}
+generate_links
+
+cleanup_files() {
+  sleep 180  
+  rm -rf boot.log list.txt config.json
+}
+cleanup_files
+
+function start_swith_program() {
+if [ -n "$keep1" ]; then
+  if [ -z "$pid" ]; then
+    echo "course'$program'Not running, starting..."
+    eval "$command"
+  else
+    echo "course'$program'running，PID: $pid"
+  fi
+else
+  echo "course'$program'No need"
+fi
+}
+
+function start_web_program() {
+  if [ -z "$pid" ]; then
+    echo "course'$program'Not running, starting..."
+    eval "$command"
+  else
+    echo "course'$program'running，PID: $pid"
+  fi
+}
+
+function start_server_program() {
+  if [ -z "$pid" ]; then
+    echo "'$program'Not running, starting..."
+    cleanup_files
+    sleep 2
+    eval "$command"
+    sleep 5
+    generate_links
+    sleep 3
+  else
+    echo "course'$program'running，PID: $pid"
+  fi
+}
+
+function start_program() {
+  local program=$1
+  local command=$2
+
+  pid=$(pidof "$program")
+
+  if [ "$program" = "swith" ]; then
+    start_swith_program
+  elif [ "$program" = "web" ]; then
+    start_web_program
+  elif [ "$program" = "server" ]; then
+    start_server_program
+  fi
+}
+
+programs=("swith" "web" "server")
+commands=("$keep1" "$keep2" "$keep3")
+
+while true; do
+  for ((i=0; i<${#programs[@]}; i++)); do
+    program=${programs[i]}
+    command=${commands[i]}
+
+    start_program "$program" "$command"
+  done
+  sleep 180
+done
