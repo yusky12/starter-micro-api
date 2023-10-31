@@ -1,17 +1,14 @@
 {
-  "name": "hello",
-  "version": "1.1.1",
-  "main": "index.js",
-  "repository": "",
-  "author": "",
-  "license": "Apache-2.0",
-  "private": true,
+  "name": "nodejs-proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {  
-  },
-  "engines": {
-    "node": ">=14"
+  "dependencies": {
+    "http-proxy": "latest",
+    "ws": "^8.13.0"
   }
 }
